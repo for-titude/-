@@ -17,8 +17,13 @@ router.beforeEach(async(to, from, next) => {
       // 跳转到主页
       next('/') // 中转到主页
       // next（地址）并没有执行后置守卫
-      nprogress.done()
+      // nprogress.done()
     } else {
+      // 获取用户资料
+      if (!store.getters.userId) {
+        // 没有id才会调用 vuex的获取资料的action
+        await store.dispatch('user/getUserInfo')
+      }
       next() // 放行
     }
   } else {
@@ -27,7 +32,7 @@ router.beforeEach(async(to, from, next) => {
       next()
     } else {
       next('/login') // 中转到登录页
-      nprogress.done()
+      // nprogress.done()
     }
   }
 })

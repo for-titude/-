@@ -1,5 +1,6 @@
 import axios from 'axios'
 import store from '@/store'
+import router from '@/router'
 import { Message } from 'element-ui'
 
 const service = axios.create({
@@ -31,6 +32,15 @@ service.interceptors.response.use((response) => {
   }
 }, async(error) => {
   // error.message
+  if (error.response.status === 401) {
+    // 1.清空本地的token
+    store.dispatch('user/logout')
+    // 2.跳转到登录页
+    router.push('/login')
+    // 3.提示
+    Message({ type: 'warning', message: '登录过期，请重新登录' })
+    return Promise.reject(new Error(error.message))
+  }
   Message({ type: 'error', message: error.message })
   return Promise.reject(error)
 })
