@@ -1,6 +1,6 @@
 <template>
   <!-- title表示dialog的标题，visible表示dialog是否显示，@close表示dialog关闭时触发的事件 -->
-  <el-dialog title="新增部门" :visible="showDialog" @close="close">
+  <el-dialog :title="showTitle" :visible="showDialog" @close="close">
     <!-- label-width表示设置label的宽度 -->
     <el-form label-width="120px">
       <el-form ref="addDept" :model="formData" :rules="rules" label-width="120px">
@@ -38,7 +38,7 @@
     </el-form></el-dialog>
 </template>
 <script>
-import { getDepartment, getManagerList, addDepartment } from '@/api/department'
+import { getDepartment, getManagerList, addDepartment, getDepartmentDetail, updateDepartment } from '@/api/department'
 export default {
   name: 'AddDept',
   props: {
@@ -70,7 +70,11 @@ export default {
             // 自定义校验模式
             validator: async(rule, value, callback) => {
               // value就是输入的编码
-              const result = await getDepartment()
+              let result = await getDepartment()
+              // 如果是编辑操作，排除当前节点
+              if (this.formData.id) {
+                result = result.filter(item => item.id !== this.formData.id)
+              }
               // result数组中是否存在 value值
               if (result.some(item => item.code === value)) {
                 callback(new Error('部门中已经有该编码了'))
@@ -93,7 +97,11 @@ export default {
             // 自定义校验模式
             validator: async(rule, value, callback) => {
               // value就是输入的编码
-              const result = await getDepartment()
+              let result = await getDepartment()
+              // 如果是编辑操作，排除当前节点
+              if (this.formData.id) {
+                result = result.filter(item => item.id !== this.formData.id)
+              }
               // result数组中是否存在 value值
               if (result.some(item => item.name === value)) {
                 callback(new Error('部门中已经有该名称了'))
@@ -107,14 +115,26 @@ export default {
       managerList: []
     }
   },
+  computed: {
+    showTitle() {
+      return this.formData.id ? '编辑部门' : '新增部门'
+    }
+  },
   created() {
     this.getManagerList()
   },
   methods: {
     close() {
+      this.formData = {
+        code: '', // 部门编码
+        introduce: '', // 部门介绍
+        managerId: '', // 部门负责人id
+        name: '', // 部门名称
+        pid: '' // 父级部门的id
+      }
       this.$emit('update:showDialog', false)
       // 使用resetFields方法重置表单
-      this.$refs.addDept.resetFields()
+      // this.$refs.addDept.resetFields()
     },
     async getManagerList() {
       this.managerList = await getManagerList()
@@ -122,14 +142,23 @@ export default {
     btnOK() {
       this.$refs.addDept.validate(async isOK => {
         if (isOK) {
-          await addDepartment({ ...this.formData, pid: this.currentNodeId })
-          // 通知父组件更新
-          this.$emit('updateDepartment')
+          let msg = '新增'
+          if (this.formData.id) {
+            msg = '编辑'
+            await updateDepartment(this.formData)
+          } else {
+            await addDepartment({ ...this.formData, pid: this.currentNodeId })
+            // 通知父组件更新
+            this.$emit('updateDepartment')
+          }
           // 提示消息
-          this.$message.success(`新增部门成功`)
+          this.$message.success(`${msg}部门成功`)
           this.close()
         }
       })
+    },
+    async getDepartmentDetail() {
+      this.formData = await getDepartmentDetail(this.currentNodeId)
     }
   }
 }
